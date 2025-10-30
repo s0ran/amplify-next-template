@@ -26,10 +26,7 @@ export default async function Page() {
   const spaceId = 'test-space-id';
 
   console.log('Calling Space.get...');
-  let space;
-  for (let i: number = 0; i < 60; i++){
-    space = await cookiesClient.models.Space.get({ id: spaceId });
-  }
+  const space = await cookiesClient.models.Space.get({ id: spaceId });
   console.log('Space.get completed');
 
   console.log('Calling StorageItem.list...');
