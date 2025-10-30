@@ -42,17 +42,17 @@ export default async function Page() {
 
   console.log('Calling Space.get...');
 
-  let space
-  runWithAmplifyServerContext({
-    nextServerContext: { cookies },
-    operation: async (contextSpec) => {
-      // the for loop is running within the same context
-      for (let i: number = 0; i < 60; i++){
-          space = await client.models.Space.get(contextSpec, { id: spaceId });
-          console.log("space get called");
-      }
-    }
-  })
+//   let space
+//   runWithAmplifyServerContext({
+//     nextServerContext: { cookies },
+//     operation: async (contextSpec) => {
+//       // the for loop is running within the same context
+//     //   for (let i: number = 0; i < 60; i++){
+//     //       space = await client.models.Space.get(contextSpec, { id: spaceId });
+//     //       console.log("space get called");
+//     //   }
+//     }
+//   })
 
   console.log('Space.get completed');
 
