@@ -1,52 +1,64 @@
-"use client";
+import { cookiesClient } from '@/lib/server-client';
+import { AuthGetCurrentUserServer } from '@/lib/amplify-utils';
+// import { getBreadcrumbData } from '@/lib/breadcrumb';
+// import ReloadButton from './ReloadButton';
+// import { getCurrentUser } from 'aws-amplify/auth/server';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 
-import { useState, useEffect } from "react";
-import { generateClient } from "aws-amplify/data";
-import type { Schema } from "@/amplify/data/resource";
-import "./../app/app.css";
 import { Amplify } from "aws-amplify";
+import { parseAmplifyConfig } from "aws-amplify/utils";
 import outputs from "@/amplify_outputs.json";
-import "@aws-amplify/ui-react/styles.css";
+import { generateClient } from 'aws-amplify/api/server';
+import { type Schema } from '@/amplify/data/resource';
+import { createServerRunner } from '@aws-amplify/adapter-nextjs';
 
-Amplify.configure(outputs);
+const { runWithAmplifyServerContext } = createServerRunner({
+  config: outputs,
+});
 
-const client = generateClient<Schema>();
 
-export default function App() {
-  const [todos, setTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
+const amplifyConfig = parseAmplifyConfig(outputs);
+const client = generateClient<Schema>({ config: amplifyConfig });
 
-  function listTodos() {
-    client.models.Todo.observeQuery().subscribe({
-      next: (data) => setTodos([...data.items]),
-    });
+export default async function Page() {
+
+  // 認証チェック
+  try {
+    const user = await AuthGetCurrentUserServer();
+    console.log('認証済みユーザー:', user);
+  } catch (error) {
+    console.log('未認証ユーザー、リダイレクト');
+    redirect('/auth/signin');
   }
 
-  useEffect(() => {
-    listTodos();
-  }, []);
+  console.log('cookies');
+  console.log(cookies);
+  console.log({cookies});
+  console.log('=== Starting test-faithful page ===');
 
-  function createTodo() {
-    client.models.Todo.create({
-      content: window.prompt("Todo content"),
-    });
-  }
+  // 1つのページ表示で複数のGraphQLクエリを実行
+  const spaceId = 'test-space-id';
+
+  console.log('Calling Space.get...');
+
+  let space
+  runWithAmplifyServerContext({
+    nextServerContext: { cookies },
+    operation: async (contextSpec) => {
+      // the for loop is running within the same context
+      for (let i: number = 0; i < 60; i++){
+          space = await client.models.Space.get(contextSpec, { id: spaceId });
+          console.log("space get called");
+      }
+    }
+  })
+
+  console.log('Space.get completed');
 
   return (
-    <main>
-      <h1>My todos</h1>
-      <button onClick={createTodo}>+ new</button>
-      <ul>
-        {todos.map((todo) => (
-          <li key={todo.id}>{todo.content}</li>
-        ))}
-      </ul>
-      <div>
-        🥳 App successfully hosted. Try creating a new todo.
-        <br />
-        <a href="https://docs.amplify.aws/nextjs/start/quickstart/nextjs-app-router-client-components/">
-          Review next steps of this tutorial.
-        </a>
+      <div style={{ padding: '20px' }}>
+        <h1>Faithful Reproduction Test</h1>
       </div>
-    </main>
   );
 }
