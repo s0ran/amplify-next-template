@@ -6,28 +6,13 @@ import { AuthGetCurrentUserServer } from '@/lib/amplify-utils';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-import { Amplify } from "aws-amplify";
-import { parseAmplifyConfig } from "aws-amplify/utils";
-import outputs from "@/amplify_outputs.json";
-import { generateClient } from 'aws-amplify/api/server';
-import { type Schema } from '@/amplify/data/resource';
-import { createServerRunner } from '@aws-amplify/adapter-nextjs';
-
-const { runWithAmplifyServerContext } = createServerRunner({
-  config: outputs,
-});
-
-
-const amplifyConfig = parseAmplifyConfig(outputs);
-const client = generateClient<Schema>({ config: amplifyConfig });
-
 export default async function Page() {
 
   // 認証チェック
-  try {
-    const user = await AuthGetCurrentUserServer();
-    console.log('認証済みユーザー:', user);
-  } catch (error) {
+  const authResult = await AuthGetCurrentUserServer();
+  console.log('認証済みユーザー:', authResult);
+  
+  if (!authResult.success) {
     console.log('未認証ユーザー、リダイレクト');
     redirect('/auth/signin');
   }
@@ -41,24 +26,33 @@ export default async function Page() {
   const spaceId = 'test-space-id';
 
   console.log('Calling Space.get...');
-
-//   let space
-//   runWithAmplifyServerContext({
-//     nextServerContext: { cookies },
-//     operation: async (contextSpec) => {
-//       // the for loop is running within the same context
-//     //   for (let i: number = 0; i < 60; i++){
-//     //       space = await client.models.Space.get(contextSpec, { id: spaceId });
-//     //       console.log("space get called");
-//     //   }
-//     }
-//   })
-
+  let space;
+  for (let i: number = 0; i < 60; i++){
+    space = await cookiesClient.models.Space.get({ id: spaceId });
+  }
   console.log('Space.get completed');
+
+  console.log('Calling StorageItem.list...');
+  const items = await cookiesClient.models.StorageItem.list();
+  console.log('StorageItem.list completed, count:', items.data.length);
+
+  console.log('Calling getBreadcrumbData...');
+//   const breadcrumb = await getBreadcrumbData('test-item-id'); // 内部で再帰的にStorageItem.get()を複数回実行
+//   console.log('getBreadcrumbData completed, levels:', breadcrumb.length);
+
+  console.log('=== test-faithful page completed ===');
 
   return (
       <div style={{ padding: '20px' }}>
-        <h1>Faithful Reproduction Test</h1>
+      <h1>Faithful Reproduction Test</h1>
+      <div>
+        <h2>Space</h2>
+        <pre>{JSON.stringify(space?.data, null, 2)}</pre>
       </div>
+      <div>
+        <h2>Items (Total: {items.data.length})</h2>
+        <pre>{JSON.stringify(items.data, null, 2)}</pre>
+      </div>
+    </div>
   );
 }
